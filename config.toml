@@ -1,0 +1,5 @@
+title = "GO YouTube Crawler configuration"
+
+[crawler]
+calls_per_minutes = 60  # API calls rate limit: x api calls/minute
+concurrent_calls = 2    # Number of concurrent API calls
