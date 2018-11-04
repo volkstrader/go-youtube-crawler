@@ -16,6 +16,7 @@ var (
 	keywords    *[]string
 	client      *YouTubeClient
 	taskCtrl    *TaskController
+	db          database
 	maxVideos   int64
 	searchCount int64
 	fetchCount  int64
@@ -68,11 +69,17 @@ func initEnv() {
 	videosPerPage := viper.GetInt64("crawler.max_videos_per_call")
 	callsPerMinute := viper.GetInt("crawler.calls_per_minute")
 	concurrency := viper.GetInt("crawler.concurrent_calls")
+	dbfile := viper.GetString("database.file")
 
 	taskCtrl = NewController(callsPerMinute, concurrency)
 	client, err = NewClient(apiKey, videosPerPage)
 	if err != nil {
 		panic(fmt.Errorf("fatal error create new YouTubeClient, error: %s", err))
+	}
+
+	db, err = newDB(dbfile)
+	if err != nil {
+		panic(fmt.Errorf("fatal error opening database '%s', error: %s", dbfile, err))
 	}
 
 	nextCh = make(chan string)
@@ -103,7 +110,7 @@ func search(nextPageToken string) Task {
 			Int64("searchCount", searchCount).
 			Int("newVidoes", len(ids)).
 			Int64("maxVideos", maxVideos).
-			Str("nextToken", nextToken).
+			Str("nextPageToken", nextToken).
 			Msg("new search result")
 		searchCount += int64(len(ids))
 
@@ -188,6 +195,7 @@ func main() {
 	defer func() {
 		close(nextCh)
 		close(saveCh)
+		db.close()
 		taskCtrl.End()
 	}()
 
@@ -224,10 +232,7 @@ func main() {
 			case videos := <-saveCh:
 				for _, video := range videos {
 					count++
-					fmt.Println(video.Id)
-					fmt.Println(video.Snippet.Title)
-					fmt.Println("===========================")
-					//fmt.Println(video.Snippet.Description)
+					db.save(video)
 				}
 
 				if count >= maxVideos {

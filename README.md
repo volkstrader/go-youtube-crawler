@@ -30,11 +30,12 @@ YOUTUBE_API_KEY=`Your Google Cloud Platform API key credential authorized for Yo
 Log on to [GCP Console](https://console.cloud.google.com/apis/credentials) to create or retrieve your API key credential, authorized for **YouTube Data API v3** 
 
 ## 3rd Party Dependency
-* go get -u [github.com/rs/zerolog/log](https://github.com/rs/zerolog)
-* go get -u [github.com/spf13/viper](https://github.com/spf13/viper)
-* go get -u [google.golang.org/api/youtube/v3](https://godoc.org/google.golang.org/api/youtube/v3)
-* go get -u [google.golang.org/api/googleapi/transport](https://google.golang.org/api/googleapi/transport)
-* go get [github.com/google/uuid](https://github.com/google/uuid)
+* go get -u [github.com/rs/zerolog/log](https://github.com/rs/zerolog) `for logging`
+* go get -u [github.com/spf13/viper](https://github.com/spf13/viper) `for configuration`
+* go get -u [google.golang.org/api/youtube/v3](https://godoc.org/google.golang.org/api/youtube/v3) `for youtube`
+* go get -u [google.golang.org/api/googleapi/transport](https://google.golang.org/api/googleapi/transport) `for youtube`
+* go get [github.com/google/uuid](https://github.com/google/uuid) `for uuid`
+* go get -u [github.com/tidwall/buntdb](https://github.com/tidwall/buntdb) `for database`
 
 ## Build
 ``` bash

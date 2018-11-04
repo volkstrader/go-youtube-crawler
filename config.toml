@@ -4,9 +4,8 @@ log_level = "debug"         #debug, info, warn, error, fatal, panic
 [crawler]
 max_videos = 1000           # how many videos to grab at most
 max_videos_per_call = 50    # max video per each API call, NO MORE THAN 50 videos
-calls_per_minute = 40       # API calls rate limit: x api calls/minute
+calls_per_minute = 20       # API calls rate limit: x api calls/minute
 concurrent_calls = 2        # Number of concurrent API calls
 
-[datafile]
-name = "videos.json"        # save result to the filename at the current directory
-format = "json"             # file format
+[database]
+file = "videos.db"          # save result to the filename at the current directory
