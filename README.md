@@ -11,12 +11,19 @@ title = "GO YouTube Crawler configuration"
 log_level = "info"         #debug, info, warn, error, fatal, panic
 
 [crawler]
-max_videos = 20             # how many videos to grab at most
-max_videos_per_call = 10    # max video per each API call, NO MORE THAN 50 videos
-calls_per_minute = 60       # API calls rate limit: x api calls/minute
+max_videos = 1000           # how many videos to grab at most
+max_videos_per_call = 50    # max video per each API call, NO MORE THAN 50 videos
+calls_per_minute = 80       # API calls rate limit: x api calls/minute
 concurrent_calls = 2        # Number of concurrent API calls
 ```
 
+### How much time does it take to grab 1000 videos
+According to [APIs Explorer](https://developers.google.com/apis-explorer/?hl=en_US#p/youtube/v3/youtube.search.list), 50 is the maximum number of items returns from video search.  It takes 2 API calls, search and list, to grab the set of 50 videos.  
+
+> runtime_minute = max_video * 2 / max_videos_per_call / calls_per_minute
+
+When it is set to `80 calls per minute`, the expected runtime will be around `0.5 minutes` or `30 seconds`
+   
 ## Enviornment Variables
 YOUTUBE_API_KEY=`Your Google Cloud Platform API key credential authorized for YouTube Data API v3`
 

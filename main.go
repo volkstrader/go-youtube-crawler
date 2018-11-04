@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"google.golang.org/api/youtube/v3"
-	"math"
 	"sync"
 	"time"
 )
@@ -18,7 +17,6 @@ var (
 	client      *YouTubeClient
 	taskCtrl    *TaskController
 	maxVideos   int64
-	calls       int64
 	searchCount int64
 	fetchCount  int64
 	nextCh      chan string
@@ -63,15 +61,13 @@ func initEnv() {
 
 	log.Debug().Interface("viper", viper.AllSettings()).Msg("show all config settings")
 
-	// init config
+	// init main package vars
 	// TODO: validate config values
 	apiKey := viper.GetString("youtube_api_key")
 	maxVideos = viper.GetInt64("crawler.max_videos")
 	videosPerPage := viper.GetInt64("crawler.max_videos_per_call")
 	callsPerMinute := viper.GetInt("crawler.calls_per_minute")
 	concurrency := viper.GetInt("crawler.concurrent_calls")
-
-	calls = int64(math.Ceil(float64(maxVideos) / float64(videosPerPage)))
 
 	taskCtrl = NewController(callsPerMinute, concurrency)
 	client, err = NewClient(apiKey, videosPerPage)
@@ -85,6 +81,7 @@ func initEnv() {
 
 func search(nextPageToken string) Task {
 	return func(ctx context.Context, trace TaskTrace) {
+		endOfSearch := false
 		log.Info().
 			Str("id", trace.TraceID).
 			Str("nextPageToken", nextPageToken).
@@ -101,10 +98,20 @@ func search(nextPageToken string) Task {
 			return
 		}
 
+		log.Info().
+			Str("id", trace.TraceID).
+			Int64("searchCount", searchCount).
+			Int("newVidoes", len(ids)).
+			Int64("maxVideos", maxVideos).
+			Str("nextToken", nextToken).
+			Msg("new search result")
 		searchCount += int64(len(ids))
+
+		// search next page
 		if searchCount < maxVideos && nextToken != "" {
 			nextCh <- nextToken
 		} else {
+			endOfSearch = true
 			// found enough results OR no more results
 			// but still need to fetch the remaining videos
 			log.Info().
@@ -112,9 +119,9 @@ func search(nextPageToken string) Task {
 				Int64("searchCount", searchCount).
 				Int64("maxVideos", maxVideos).
 				Msg("ALL search completed")
-			close(nextCh)
 		}
 
+		// queue to fetch video metadata
 		if fetchCount >= maxVideos {
 			// fetch enough videos, do not fetch more
 			log.Info().
@@ -128,7 +135,12 @@ func search(nextPageToken string) Task {
 			// no results
 			log.Info().
 				Str("id", trace.TraceID).
+				Bool("endOfSearch", endOfSearch).
 				Msg("NO search results")
+
+			if endOfSearch {
+				taskCtrl.End()
+			}
 		}
 
 		trace.Completed = time.Now()
@@ -137,7 +149,6 @@ func search(nextPageToken string) Task {
 			Int("results", len(ids)).
 			Interface("trace", trace).
 			Msg("search completed")
-
 	}
 }
 
@@ -147,7 +158,7 @@ func fetch(ids []string) Task {
 			Str("id", trace.TraceID).
 			Strs("ids", ids).
 			Int("videos", len(ids)).
-			Msg("fetch started")
+			Msg("fetch videos started")
 
 		trace.Started = time.Now()
 		videos, err := client.ListVideosByIds(ids)
@@ -156,7 +167,7 @@ func fetch(ids []string) Task {
 				Str("id", trace.TraceID).
 				Interface("trace", trace).
 				Err(err).
-				Msg("fetch error")
+				Msg("fetch videos error")
 		}
 
 		saveCh <- videos
@@ -166,7 +177,7 @@ func fetch(ids []string) Task {
 			Str("id", trace.TraceID).
 			Int("videos", len(videos)).
 			Interface("trace", trace).
-			Msg("fetch completed")
+			Msg("fetch videos completed")
 	}
 }
 
@@ -174,6 +185,12 @@ func main() {
 	initEnv()
 	ctx, cancel := context.WithCancel(context.Background())
 	taskCtrl.Start(ctx)
+	defer func() {
+		close(nextCh)
+		close(saveCh)
+		taskCtrl.End()
+	}()
+
 	done := false
 
 	wg.Add(1)
@@ -181,7 +198,7 @@ func main() {
 		defer wg.Done()
 
 		taskCtrl.taskCh <- search("")
-		for i := int64(1); !done && i < calls; i++ {
+		for i := int64(1); !done; i++ {
 			select {
 			case <-ctx.Done():
 				done = true
@@ -195,35 +212,41 @@ func main() {
 
 	wg.Add(1)
 	go func() {
-		defer func() {
-			close(saveCh)
-			wg.Done()
-		}()
+		defer wg.Done()
 
-		for j := int64(0); !done && j < maxVideos; {
+		count := int64(0)
+
+		for !done {
 			select {
 			case <-ctx.Done():
 				done = true
 				break
 			case videos := <-saveCh:
 				for _, video := range videos {
-					j++
+					count++
 					fmt.Println(video.Id)
 					fmt.Println(video.Snippet.Title)
-					fmt.Println(video.Snippet.Description)
+					fmt.Println("===========================")
+					//fmt.Println(video.Snippet.Description)
 				}
+
+				if count >= maxVideos {
+					log.Info().Msg("all videos saved, exit gracefully")
+					done = true
+					cancel()
+				}
+
+				break
+			case <-taskCtrl.doneCh:
+				log.Info().Msg("all task workers exited")
+				done = true
+				cancel()
 				break
 			}
-		}
-
-		if !done {
-			log.Info().Msg("all videos saved, exit gracefully")
-			cancel()
 		}
 	}()
 
 	// wait for exit
 	wg.Wait()
 	log.Info().Msg("all go routines exited, terminate")
-	taskCtrl.End()
 }
