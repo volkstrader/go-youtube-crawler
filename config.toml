@@ -1,5 +1,8 @@
 title = "GO YouTube Crawler configuration"
+log_level = "debug"         #debug, info, warn, error, fatal, panic
 
 [crawler]
-calls_per_minutes = 60  # API calls rate limit: x api calls/minute
-concurrent_calls = 2    # Number of concurrent API calls
+max_videos = 20             # how many videos to grab at most
+max_videos_per_call = 10    # max video per each API call, NO MORE THAN 50 videos
+calls_per_minute = 60       # API calls rate limit: x api calls/minute
+concurrent_calls = 2        # Number of concurrent API calls
