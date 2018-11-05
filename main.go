@@ -13,16 +13,19 @@ import (
 )
 
 var (
-	keywords    *[]string
-	client      *YouTubeClient
-	taskCtrl    *TaskController
-	db          database
-	maxVideos   int64
-	searchCount int64
-	fetchCount  int64
-	nextCh      chan string
-	saveCh      chan []*youtube.Video
-	wg          sync.WaitGroup
+	keywords     *[]string
+	findMode     *bool
+	titlePattern *string
+	descPattern  *string
+	client       *YouTubeClient
+	taskCtrl     *TaskController
+	db           database
+	maxVideos    int64
+	searchCount  int64
+	fetchCount   int64
+	nextCh       chan string
+	saveCh       chan []*youtube.Video
+	wg           sync.WaitGroup
 )
 
 func initEnv() {
@@ -42,13 +45,22 @@ func initEnv() {
 	}
 
 	// init command line flags
-	keywords = pflag.StringArray("keywords", nil, "")
+	// keywords flag
+	keywords = pflag.StringArray("keywords", nil, "specify multiple keywords for searching videos from YouTube")
+	findMode = pflag.Bool("find", false, "enable find mode for finding downloaded video metadata by title and description")
+	titlePattern = pflag.String("title", "*", "title filter in regular expression")
+	descPattern = pflag.String("desc", "*", "description filter in regular expression")
+
 	pflag.Parse()
-	if err := viper.BindPFlags(pflag.CommandLine); err != nil || keywords == nil || len(*keywords) == 0 {
-		if err == nil {
-			err = fmt.Errorf("missing keywords flag.\n Usage: go-youtube-crawler --keywords term1 --keywords term2 ... ")
-		}
+	if err := viper.BindPFlags(pflag.CommandLine); err != nil {
 		panic(err)
+	}
+
+	if !*findMode {
+		if len(*keywords) == 0 {
+			err := fmt.Errorf("missing keywords flag.\n Usage: go-youtube-crawler --keywords term1 --keywords term2 ... ")
+			panic(err)
+		}
 	}
 
 	// init logging
@@ -188,16 +200,30 @@ func fetch(ids []string) Task {
 	}
 }
 
+func find() {
+	results, err := db.find(*titlePattern, *descPattern)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(results)
+}
+
 func main() {
 	initEnv()
-	ctx, cancel := context.WithCancel(context.Background())
-	taskCtrl.Start(ctx)
 	defer func() {
 		close(nextCh)
 		close(saveCh)
 		db.close()
 		taskCtrl.End()
 	}()
+
+	if *findMode {
+		find()
+		return
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	taskCtrl.Start(ctx)
 
 	done := false
 
