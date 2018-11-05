@@ -8,7 +8,7 @@ Require config.[toml](https://github.com/toml-lang/toml) file in the executable 
 
 ```toml
 title = "GO YouTube Crawler configuration"
-log_level = "info"         #debug, info, warn, error, fatal, panic
+log_level = "info"         # debug, info, warn, error, fatal, panic
 
 [crawler]
 max_videos = 1000           # how many videos to grab at most
@@ -41,6 +41,7 @@ Log on to [GCP Console](https://console.cloud.google.com/apis/credentials) to cr
 * go get -u [github.com/tidwall/buntdb](https://github.com/tidwall/buntdb) `for database`
 
 ## Build
+Project is build with Go 1.11
 ``` bash
 > go build
 ```

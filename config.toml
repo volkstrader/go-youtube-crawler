@@ -1,5 +1,5 @@
 title = "GO YouTube Crawler configuration"
-log_level = "debug"         #debug, info, warn, error, fatal, panic
+log_level = "debug"         # debug, info, warn, error, fatal, panic
 
 [crawler]
 max_videos = 1000           # how many videos to grab at most
