@@ -12,7 +12,7 @@ log_level = "info"         #debug, info, warn, error, fatal, panic
 
 [crawler]
 max_videos = 1000           # how many videos to grab at most
-max_videos_per_call = 50    # max video per each API call, NO MORE THAN 50 videos
+max_videos_per_call = 50    # max video batched per each API call, NO MORE THAN 50 videos
 calls_per_minute = 20       # API calls rate limit: x api calls/minute
 concurrent_calls = 2        # Number of concurrent API calls
 
