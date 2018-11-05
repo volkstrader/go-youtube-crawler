@@ -7,7 +7,7 @@
 Require config.[toml](https://github.com/toml-lang/toml) file in the executable directory
 
 ```toml
-title = "GO YouTube Crawler configuration"
+# GO YouTube Crawler configuration
 log_level = "info"         # debug, info, warn, error, fatal, panic
 
 [crawler]

@@ -1,4 +1,4 @@
-title = "GO YouTube Crawler configuration"
+# GO YouTube Crawler configuration
 log_level = "debug"         # debug, info, warn, error, fatal, panic
 
 [crawler]
